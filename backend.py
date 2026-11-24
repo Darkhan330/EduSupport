@@ -6,17 +6,32 @@ from datetime import datetime
 from functools import wraps
 
 from flask import (Flask, render_template, request, redirect, url_for,
-                   session, flash, jsonify, abort)
+                   session, flash, jsonify, abort, send_from_directory)
 from werkzeug.security import generate_password_hash, check_password_hash
 
-app = Flask(
-    __name__,
-    template_folder="frontend",
-    static_folder="frontend",
-    static_url_path="/frontend",
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# HTML-файлы лежат рядом с backend.py. CSS/JS/видео выдаются
+# через отдельный маршрут с белым списком, чтобы не открыть БД и Python-файлы.
+app = Flask(__name__, template_folder=BASE_DIR, static_folder=None)
+app.config["SECRET_KEY"] = os.environ.get(
+    "SECRET_KEY", "dev-only-change-this-secret-key"
 )
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "change-this-secret-key-before-deployment")
-DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Final_project.db")
+DATABASE = os.path.join(BASE_DIR, "Final_project.db")
+
+PUBLIC_ASSETS = {
+    "hub.css",
+    "hub.js",
+    "index2.css",
+    "index3.js",
+    "6266-190550868_medium.mp4",
+}
+
+@app.route("/static/<path:filename>")
+def static(filename):
+    if filename not in PUBLIC_ASSETS:
+        abort(404)
+    return send_from_directory(BASE_DIR, filename)
 
 TICKET_STATUSES = ("Open", "In Progress", "Resolved")
 TICKET_CATEGORIES = ("Wi-Fi & Network", "LMS / Platform", "PC / Classroom Hardware",
@@ -340,7 +355,12 @@ def api_stats():
     return jsonify(total=total, resolved=resolved, open=open_)
 
 
+# Выполняется также при запуске приложения через Gunicorn на Render.
 init_db()
 
 if __name__ == "__main__":
-    app.run(debug=os.environ.get("FLASK_DEBUG", "0") == "1")
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", "5000")),
+        debug=os.environ.get("FLASK_DEBUG", "0") == "1"
+    )
