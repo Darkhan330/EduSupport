@@ -56,7 +56,7 @@ def add_column_if_missing(db, table, column, definition):
 
 
 def init_db():
-    """Создаёт таблицы при необходимости и дополняет старые таблицы новыми колонками."""
+    """Создаёт таблицы при необходимости, дополняет старые таблицы и создает аккаунт админа."""
     with get_db_connection() as db:
         db.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -83,6 +83,20 @@ def init_db():
         add_column_if_missing(db, "tickets", "group_name", "TEXT")
         add_column_if_missing(db, "tickets", "category", "TEXT")
         add_column_if_missing(db, "tickets", "created_at", "TEXT")
+
+        # АВТОМАТИЧЕСКОЕ СОЗДАНИЕ АККАУНТА АДМИНИСТРАТОРА
+        ADMIN_LOGIN = "darkhan"
+        ADMIN_PASSWORD = "123"
+        ADMIN_FULL_NAME = "Darkhan (Admin)"
+        
+        admin_exists = db.execute("SELECT 1 FROM users WHERE lower(login) = ?", (ADMIN_LOGIN,)).fetchone()
+        if not admin_exists:
+            password_hash = generate_password_hash(ADMIN_PASSWORD)
+            db.execute(
+                "INSERT INTO users (login, password, role, full_name) VALUES (?, ?, 'admin', ?)",
+                (ADMIN_LOGIN, password_hash, ADMIN_FULL_NAME)
+            )
+
         db.commit()
 
 
