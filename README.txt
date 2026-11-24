@@ -1,62 +1,47 @@
-# EduSupport — Flask + SQLite
+# EduSupport — Faculty IT Helpdesk System
 
-## Структура проекта
+EduSupport — это веб-портал IT-поддержки для студентов и преподавателей факультета. Система позволяет создавать заявки на решение технических проблем в аудиториях и на кафедре, отслеживать их статус и разграничивать права доступа с помощью встроенной системы ролей (Admin, Student, Teacher).
+
+🚀 **Live System URL:** [https://edusupport-x4x9.onrender.com](https://edusupport-x4x9.onrender.com)  
+
+---
+
+## 🏗 Архитектура системы
 
 ```text
+[ Browser (Client) ] 
+       │
+       │ HTTPS / REST API
+       ▼
+[ Render Web Service ] ── (Python 3 / Flask / Gunicorn)
+       │
+       │ Connection Pooler (Port 6543 / PostgreSQL)
+       ▼
+[ Supabase Cloud Database ] ── (PostgreSQL: users, tickets)
+
 EduSupport/
-├── backend.py
-├── Final_project.db
-├── requirements.txt
-├── README.txt
-└── frontend/
-    ├── login.html
-    ├── registration.html
-    ├── forget.html
-    ├── hub.html
-    ├── index2.css
-    ├── index3.js
-    ├── hub.css
-    ├── hub.js
-    └── 6266-190550868_medium.mp4
-```
+├── backend.py            # Основной сервер Flask (маршруты, API, auth, DB-обёртка)
+├── requirements.txt      # Зависимости Python (Flask, Gunicorn, psycopg2-binary)
+├── README.md             # Документация проекта
+├── hub.html              # Личный кабинет (студент / преподаватель / админ)
+├── login.html            # Форма входа
+├── registration.html     # Форма регистрации
+├── forget.html           # Восстановление пароля
+├── index2.css            # Стили авторизации и регистрации
+├── index3.js             # Логика авторизации
+├── hub.css               # Стили личного кабинета
+├── hub.js                # Логика работы с API заявок
+└── 6266-190550868_medium.mp4 # Фоловое видео для экрана входа
 
-Все HTML, CSS, JavaScript и медиафайлы находятся вместе в `frontend/`.
-Папок `templates/` и `static/` нет. Flask использует одну и ту же папку
-`frontend/` для загрузки Jinja HTML и выдачи ресурсов браузеру.
-
-## Установка и запуск локально
-
-```bash
-python -m venv venv
-# Windows: venv\Scripts\activate
-# macOS/Linux: source venv/bin/activate
-pip install -r requirements.txt
-python backend.py
-```
-
-Откройте http://127.0.0.1:5000
-
-## Render
-
-- Build Command: `pip install -r requirements.txt`
-- Start Command: `gunicorn backend:app`
-- Runtime: Python 3
-
-Задайте в Environment Variables переменную `SECRET_KEY` со случайным длинным значением.
-Для постоянного хранения SQLite-файла на Render настройте Persistent Disk и разместите
-базу на нём либо используйте PostgreSQL. Без постоянного хранилища SQLite может
-сбрасываться при пересоздании экземпляра.
-
-## Основные маршруты
-
-- `/` — перенаправление на кабинет или вход
-- `/register` — регистрация
-- `/login` — вход
-- `/hub` — личный кабинет
-- `/logout` — выход
-- `/forgot-password` — демонстрационная форма восстановления (письма не отправляются)
-- `/api/tickets` — просмотр и создание заявок
-- `/api/tickets/<id>/status` — изменение статуса администратором
-- `/api/stats` — статистика заявок
-
-Ресурсы frontend отдаются по URL `/frontend/<имя-файла>`.
+Маршрут,Метод,Описание
+/,GET,Перенаправление на /hub или /login
+/register,"GET, POST","Регистрация новых пользователей (student, teacher)"
+/login,"GET, POST",Вход в систему
+/hub,GET,Панель управления и список тикетов
+/logout,POST,Выход из сессии
+/forgot-password,"GET, POST",Форма восстановления доступа
+/api/tickets,GET,"Список тикетов (все для admin, только свои для student/teacher)"
+/api/tickets,POST,Создание новой заявки
+/api/tickets/<id>/status,POST,Изменение статуса тикета (admin only)
+/api/stats,GET,"Статистика заявок (всего, открыто, решено)"
+/static/<filename>,GET,"Безопасная раздача CSS, JS и медиафайлов"
