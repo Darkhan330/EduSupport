@@ -2,7 +2,7 @@
 
 EduSupport — это веб-портал IT-поддержки для студентов и преподавателей факультета. Система позволяет создавать заявки на решение технических проблем в аудиториях и на кафедре, отслеживать их статус и разграничивать права доступа с помощью встроенной системы ролей (Admin, Student, Teacher).
 
-🚀 **Live System URL:** [https://edusupport-x4x9.onrender.com](https://edusupport-x4x9.onrender.com]  
+🚀 **Live System URL:** https://edusupport-x4x9.onrender.com](https://edusupport-x4x9.onrender.com  
 
 ---
 
