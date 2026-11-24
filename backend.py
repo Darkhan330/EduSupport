@@ -11,8 +11,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# HTML-файлы лежат рядом с backend.py. CSS/JS/видео выдаются
-# через отдельный маршрут с белым списком, чтобы не открыть БД и Python-файлы.
 app = Flask(__name__, template_folder=BASE_DIR, static_folder=None)
 app.config["SECRET_KEY"] = os.environ.get(
     "SECRET_KEY", "dev-only-change-this-secret-key"
@@ -42,7 +40,6 @@ TICKET_CATEGORIES = ("Wi-Fi & Network", "LMS / Platform", "PC / Classroom Hardwa
 # База данных (SQLite)
 # ----------------------------------------------------------------------------
 def get_db_connection():
-    """Открывает соединение с SQLite. row_factory позволяет обращаться к колонкам по имени."""
     connection = sqlite3.connect(DATABASE)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
@@ -56,7 +53,6 @@ def add_column_if_missing(db, table, column, definition):
 
 
 def init_db():
-    """Создаёт таблицы при необходимости, дополняет старые таблицы и создает аккаунт админа."""
     with get_db_connection() as db:
         db.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -77,14 +73,13 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
         """)
-        # Миграции для баз, созданных старой версией проекта
         add_column_if_missing(db, "users", "full_name", "TEXT")
         add_column_if_missing(db, "tickets", "requester_name", "TEXT")
         add_column_if_missing(db, "tickets", "group_name", "TEXT")
         add_column_if_missing(db, "tickets", "category", "TEXT")
         add_column_if_missing(db, "tickets", "created_at", "TEXT")
 
-        # АВТОМАТИЧЕСКОЕ СОЗДАНИЕ АККАУНТА АДМИНИСТРАТОРА
+        # СОЗДАНИЕ АККАУНТА АДМИНИСТРАТОРА ПРИ СТАРТЕ
         ADMIN_LOGIN = "darkhan"
         ADMIN_PASSWORD = "123"
         ADMIN_FULL_NAME = "Darkhan (Admin)"
@@ -130,7 +125,6 @@ def inject_csrf():
 
 @app.before_request
 def check_csrf():
-    """Все POST-запросы (формы и fetch) должны содержать CSRF-токен сессии."""
     if request.method == "POST":
         sent = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token", "")
         expected = session.get("csrf_token", "")
@@ -198,7 +192,6 @@ def register():
 
         try:
             with get_db_connection() as db:
-                # Логин без учёта регистра: Darkhan1 и darkhan1 — один и тот же аккаунт
                 exists = db.execute("SELECT 1 FROM users WHERE lower(login) = ?", (login,)).fetchone()
                 if exists:
                     raise sqlite3.IntegrityError
@@ -239,8 +232,6 @@ def login():
         except (ValueError, TypeError):
             password_is_valid = False
 
-        # Миграция старых аккаунтов: если пароль был сохранён обычным текстом,
-        # после успешного входа сразу заменяем его безопасным хэшем.
         if not password_is_valid and hmac.compare_digest(stored_password.encode(), password.encode()):
             password_is_valid = True
             with get_db_connection() as db:
@@ -270,6 +261,15 @@ def hub():
     if user is None:
         session.clear()
         return redirect(url_for("login"))
+    
+    # РЕНДЕРИНГ ДЛЯ АДМИНА И ОБЫЧНЫХ ПОЛЬЗОВАТЕЛЕЙ
+    if user["role"] == "admin":
+        # Если отдельный файл называется admin_hub.html или admin.html, укажи его имя здесь
+        try:
+            return render_template("admin_hub.html", user=user)
+        except:
+            return render_template("admin.html", user=user)
+            
     return render_template("hub.html", user=user)
 
 
@@ -283,8 +283,6 @@ def logout():
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
-        # Письма не отправляем (нет почтового сервера), поэтому ответ всегда одинаковый:
-        # так нельзя узнать, существует ли такой логин.
         flash("If this account exists, recovery instructions have been sent. "
               "You can also visit the IT department (Room 304).")
         return redirect(url_for("forgot_password"))
@@ -292,7 +290,7 @@ def forgot_password():
 
 
 # ----------------------------------------------------------------------------
-# API заявок (tickets) — данные хранятся в SQLite
+# API заявок (tickets)
 # ----------------------------------------------------------------------------
 @app.route("/api/tickets", methods=["GET"])
 @login_required
@@ -361,7 +359,6 @@ def api_ticket_status(ticket_id):
 @app.route("/api/stats")
 @login_required
 def api_stats():
-    """Общая статистика по всей базе для главной страницы."""
     with get_db_connection() as db:
         total = db.execute("SELECT COUNT(*) FROM tickets").fetchone()[0]
         resolved = db.execute("SELECT COUNT(*) FROM tickets WHERE status = 'Resolved'").fetchone()[0]
@@ -369,7 +366,6 @@ def api_stats():
     return jsonify(total=total, resolved=resolved, open=open_)
 
 
-# Выполняется также при запуске приложения через Gunicorn на Render.
 init_db()
 
 if __name__ == "__main__":
