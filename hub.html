@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduSupport — Faculty IT Helpdesk Portal</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='hub.css') }}">
+    <script src="{{ url_for('static', filename='hub.js') }}" defer></script>
+</head>
+<body data-role="{{ user.role }}" data-fullname="{{ user.full_name or user.login }}">
+
+    <div class="bg-overlay"></div>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <h2>🎓 Edu<span>Support</span></h2>
+                <p>Faculty IT Helpdesk</p>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-tab="home">🏠 Home</button>
+                <button class="nav-btn" data-tab="create-ticket">➕ Create Ticket</button>
+                <button class="nav-btn" data-tab="my-tickets">📋 {{ 'All Tickets' if user.role == 'admin' else 'My Tickets' }} <span id="ticket-badge" class="badge">0</span></button>
+                <button class="nav-btn" data-tab="faq">❓ FAQ & Knowledge Base</button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="avatar">{{ '🛠' if user.role == 'admin' else ('👩‍🏫' if user.role == 'teacher' else '👨‍🎓') }}</div>
+                    <div class="user-info">
+                        <span class="user-name">{{ user.full_name or user.login }}</span>
+                        <span class="user-role">{{ user.role|capitalize }}</span>
+                    </div>
+                </div>
+                <form method="post" action="{{ url_for('logout') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="logout-btn">🚪 Log out</button>
+                </form>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="top-bar">
+                <div class="search-box">
+                    <input type="text" id="global-search" placeholder="Search tickets, issues, and FAQs...">
+                </div>
+                <div class="top-actions">
+                    <button id="theme-toggle" title="Toggle Theme">🌙</button>
+                    <div class="status-indicator">
+                        <span class="dot online"></span> System Online
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content Tabs -->
+            <div class="content-body">
+                
+                <!-- Tab: Home -->
+                <section id="tab-home" class="tab-pane active">
+                    <div class="welcome-banner">
+                        <h1>Welcome, {{ user.full_name or user.login }}!</h1>
+                        <p>Facing issues in the classroom, Wi-Fi connectivity problems, LMS issues, or university email problems? Create a ticket, and our team will resolve it as soon as possible.</p>
+                        <button class="primary-btn" onclick="switchTab('create-ticket')">Report an Issue</button>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>🎫 Total Tickets</h3>
+                            <p class="stat-value" id="stat-total">–</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>🛠 Resolved Tickets</h3>
+                            <p class="stat-value" id="stat-resolved">–</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>⏳ Waiting / In Progress</h3>
+                            <p class="stat-value" id="stat-open">–</p>
+                        </div>
+                    </div>
+
+                    <div class="quick-faq-preview">
+                        <h2>Frequently Asked Questions</h2>
+                        <div class="faq-mini-list">
+                            <div class="faq-mini-item">
+                                <h4>How to connect to the university Wi-Fi (Edu_Wi-Fi)?</h4>
+                                <p>Use your corporate login and password from your student portal account...</p>
+                            </div>
+                            <div class="faq-mini-item">
+                                <h4>How to recover access to the LMS personal account?</h4>
+                                <p>Contact room 304 or submit a ticket through this portal...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: Create Ticket -->
+                <section id="tab-create-ticket" class="tab-pane">
+                    <div class="form-card">
+                        <h2>📝 New IT Support Ticket</h2>
+                        <form id="ticket-form">
+                            <div id="ticket-error" class="form-error hidden"></div>
+                            <div class="form-group">
+                                <label for="ticket-name">Full Name / Username</label>
+                                <input type="text" id="ticket-name" required maxlength="100" value="{{ user.full_name or user.login }}" placeholder="E.g.: Alex Ivanov">
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="ticket-group">Group / Department</label>
+                                    <input type="text" id="ticket-group" required maxlength="50" placeholder="E.g.: IS-22">
+                                </div>
+                                <div class="form-group">
+                                    <label for="ticket-category">Issue Category</label>
+                                    <select id="ticket-category">
+                                        <option value="Wi-Fi & Network">Wi-Fi & Network</option>
+                                        <option value="LMS / Platform">LMS / Platform</option>
+                                        <option value="PC / Classroom Hardware">PC / Classroom Hardware</option>
+                                        <option value="Email / Account">Email / Account</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="ticket-desc">Issue Description</label>
+                                <textarea id="ticket-desc" rows="4" required maxlength="2000" placeholder="Describe in detail: classroom number, PC number, error details..."></textarea>
+                            </div>
+                            <button type="submit" class="primary-btn full-width">Submit Ticket</button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- Tab: My Tickets -->
+                <section id="tab-my-tickets" class="tab-pane">
+                    <div class="section-header">
+                        <h2>📋 {{ 'All Tickets' if user.role == 'admin' else 'Your Tickets History' }}</h2>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">All</button>
+                            <button class="filter-btn" data-filter="Open">Open</button>
+                            <button class="filter-btn" data-filter="In Progress">In Progress</button>
+                            <button class="filter-btn" data-filter="Resolved">Resolved</button>
+                        </div>
+                    </div>
+                    <div id="tickets-container" class="tickets-grid">
+                        <!-- Dynamically filled via JS -->
+                        <div class="empty-state">You have no active tickets yet. Create your first one!</div>
+                    </div>
+                </section>
+
+                <!-- Tab: FAQ -->
+                <section id="tab-faq" class="tab-pane">
+                    <h2>❓ Knowledge Base & FAQs</h2>
+                    <div class="faq-list">
+                        <div class="faq-item">
+                            <div class="faq-question">How to connect to the university Wi-Fi? <span>▼</span></div>
+                            <div class="faq-answer">
+                                <p>1. Select the <b>Edu_Wi-Fi</b> network.<br>2. Enter your student account credentials.<br>3. If the security certificate prompts for verification, click "Trust".</p>
+                            </div>
+                        </div>
+                        <div class="faq-item">
+                            <div class="faq-question">What to do if I forgot my account password? <span>▼</span></div>
+                            <div class="faq-answer">
+                                <p>You can reset it yourself using the recovery form on the main LMS page or visit the IT department (Room 304).</p>
+                            </div>
+                        </div>
+                        <div class="faq-item">
+                            <div class="faq-question">How to book a computer lab for group project work? <span>▼</span></div>
+                            <div class="faq-answer">
+                                <p>Lab booking is handled through your group leader 2 days in advance via this portal (select the "Hardware" category).</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Success Modal Window -->
+    <div id="success-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-icon">✅</div>
+            <h3>Ticket Created Successfully!</h3>
+            <p>Your ticket ID is <span id="modal-ticket-id">#0</span>. It has been saved in the database and our team will review it soon.</p>
+            <button class="primary-btn" onclick="closeModal()">Great</button>
+        </div>
+    </div>
+
+</body>
+</html>
