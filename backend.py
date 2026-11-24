@@ -198,6 +198,7 @@ def register():
 
         try:
             with get_db_connection() as db:
+                # Логин без учёта регистра: Darkhan1 и darkhan1 — один и тот же аккаунт
                 exists = db.execute("SELECT 1 FROM users WHERE lower(login) = ?", (login,)).fetchone()
                 if exists:
                     raise sqlite3.IntegrityError
@@ -238,6 +239,8 @@ def login():
         except (ValueError, TypeError):
             password_is_valid = False
 
+        # Миграция старых аккаунтов: если пароль был сохранён обычным текстом,
+        # после успешного входа сразу заменяем его безопасным хэшем.
         if not password_is_valid and hmac.compare_digest(stored_password.encode(), password.encode()):
             password_is_valid = True
             with get_db_connection() as db:
@@ -267,8 +270,6 @@ def hub():
     if user is None:
         session.clear()
         return redirect(url_for("login"))
-    
-    # Все пользователи (включая админа darkhan) попадают на единый hub.html
     return render_template("hub.html", user=user)
 
 
@@ -282,6 +283,8 @@ def logout():
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
+        # Письма не отправляем (нет почтового сервера), поэтому ответ всегда одинаковый:
+        # так нельзя узнать, существует ли такой логин.
         flash("If this account exists, recovery instructions have been sent. "
               "You can also visit the IT department (Room 304).")
         return redirect(url_for("forgot_password"))
@@ -366,6 +369,7 @@ def api_stats():
     return jsonify(total=total, resolved=resolved, open=open_)
 
 
+# Выполняется также при запуске приложения через Gunicorn на Render.
 init_db()
 
 if __name__ == "__main__":
