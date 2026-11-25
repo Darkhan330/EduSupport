@@ -34,6 +34,13 @@ EduSupport/
 ├── hub.js                # Логика работы с API заявок
 └── 6266-190550868_medium.mp4 # Фоловое видео для экрана входа
 
+Дата,Версия / Милстоун,Описание этапа
+02 Ноября 2026,v0.1 — Idea & Spec,"Определение проблемы (IT Help Desk для Astana IT University), утверждение архитектуры"
+08 Ноября 2026,v0.2 — Frontend Prototype,"Макеты страниц входа, регистрации и панели управления на HTML/CSS/JS"
+14 Ноября 2026,v0.3 — Local Backend (SQLite),"Разработка backend на Flask, связь с DB Browser SQLite, создание таблиц users и tickets"
+20 Ноября 2026,v0.4 — DB Migration,"Перенос структуры данных на облачный PostgreSQL (Supabase), разделение ролей (RBAC)"
+23 Ноября 2026,v1.0 — Render Deployment,"Настройка переменных окружения, Gunicorn, HTTPS-деплой на Render и финальное QA-тестирование"
+
 Маршрут,Метод,Описание
 /,GET,Перенаправление на /hub или /login
 /register,"GET, POST","Регистрация новых пользователей (student, teacher)"
